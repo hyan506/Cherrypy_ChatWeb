@@ -56,15 +56,10 @@ class MainApp(object):
     @cherrypy.expose
     def logoff(self):
         return open('Logoff.html')
-    
-    @cherrypy.expose    
-    def sum(self, a=0, b=0): #All inputs are strings by default
-        output = int(a)+int(b)
-        return str(output)
-        
+       
     # LOGGING IN AND OUT
     @cherrypy.expose
-    def signin(self, username=None, password=None):
+    def signin(self, username, password):
         """Check their name and password and send them either to the main page, or back to the main login screen."""
         error = self.authoriseUserLogin(username,password)
         if (error == 0):
@@ -74,26 +69,39 @@ class MainApp(object):
             raise cherrypy.HTTPRedirect('/login')
 
     @cherrypy.expose
-    def signout(self):
-        """Logs the current user out, expires their session"""
-        username = cherrypy.session.get('username')
-        if (username == None):
-            pass
-        else:
-            cherrypy.lib.sessions.expire()
-        raise cherrypy.HTTPRedirect('/')
-		
-    def authoriseUserLogin(self, username, password):
+    def signout(self, username, password):
+		"""Logs the current user out, expires their session"""
+		username = cherrypy.session.get('username')
 		hashword = hashlib.sha256()
 		hashword.update(password)
 		hashword.update(username)
-		param = {}
-		param['username'] = username
-		param['password'] = hashword.hexdigest()
-		param['location'] = location
-		param['ip']       = listen_ip
-		param['port']      = listen_port
-		url_values = urllib.urlencode(param)
+		variable = {}
+		variable['username'] = username
+		variable['password'] = hashword.hexdigest()
+		variable['enc'] = 1
+		url_values = urllib.urlencode(variable)
+		url = 'http://cs302.pythonanywhere.com/logoff'
+		url_completed = url + '?' +url_values
+		feedback = urllib2.urlopen(url_completed).read()
+		if (feedback == "0, Logged off successfully"):
+			cherrypy.lib.sessions.expire()
+			raise cherrypy.HTTPRedirect('/index')
+		else:
+			raise cherrypy.HTTPRedirect('/logoff')
+		
+    def authoriseUserLogin(self, username, password):
+		#if(username == None or password == None):
+		#	return 1
+		hashword = hashlib.sha256()
+		hashword.update(password)
+		hashword.update(username)
+		variable = {}
+		variable['username'] = username
+		variable['password'] = hashword.hexdigest()
+		variable['location'] = location
+		variable['ip']       = listen_ip
+		variable['port']      = listen_port
+		url_values = urllib.urlencode(variable)
 		url = 'http://cs302.pythonanywhere.com/report'
 		url_completed = url + '?' +url_values
 		feedback= urllib2.urlopen(url_completed).read()
