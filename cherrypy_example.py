@@ -9,12 +9,26 @@
 """
 # Requires:  CherryPy 3.2.2  (www.cherrypy.org)
 #            Python  (We use 2.7)
+import cherrypy
+import hashlib
+import urllib
+import urllib2
+import json
+import socket
+
+
 
 # The address we listen for connections on
-listen_ip = "0.0.0.0"
+listen_ip = socket.gethostbyname(socket.gethostname())
+
+if '10.103' in listen_ip:
+    location = '0'
+else:
+    location = '2'
+	
 listen_port = 10001
 
-import cherrypy
+
 
 class MainApp(object):
 
@@ -35,23 +49,13 @@ class MainApp(object):
     # PAGES (which return HTML that can be viewed in browser)
     @cherrypy.expose
     def index(self):
-        Page = "Welcome! This is a test website for COMPSYS302!<br/>"
-        
-        try:
-            Page += "Hello " + cherrypy.session['username'] + "!<br/>"
-            Page += "Here is some bonus text because you've logged in!"
-        except KeyError: #There is no username
-            
-            Page += "Click here to <a href='login'>login</a>."
-        return Page
-        
+        return open('Index.html')    
     @cherrypy.expose
     def login(self):
-        Page = '<form action="/signin" method="post" enctype="multipart/form-data">'
-        Page += 'Username: <input type="text" name="username"/><br/>'
-        Page += 'Password: <input type="text" name="password"/>'
-        Page += '<input type="submit" value="Login"/></form>'
-        return Page
+        return open('Login.html')
+    @cherrypy.expose
+    def logoff(self):
+        return open('Logoff.html')
     
     @cherrypy.expose    
     def sum(self, a=0, b=0): #All inputs are strings by default
@@ -65,7 +69,7 @@ class MainApp(object):
         error = self.authoriseUserLogin(username,password)
         if (error == 0):
             cherrypy.session['username'] = username;
-            raise cherrypy.HTTPRedirect('/')
+            raise cherrypy.HTTPRedirect('/logoff')
         else:
             raise cherrypy.HTTPRedirect('/login')
 
@@ -78,14 +82,25 @@ class MainApp(object):
         else:
             cherrypy.lib.sessions.expire()
         raise cherrypy.HTTPRedirect('/')
-        
+		
     def authoriseUserLogin(self, username, password):
-        print username
-        print password
-        if (username.lower() == "andrew") and (password.lower() == "password"):
-            return 0
-        else:
-            return 1
+		hashword = hashlib.sha256()
+		hashword.update(password)
+		hashword.update(username)
+		param = {}
+		param['username'] = username
+		param['password'] = hashword.hexdigest()
+		param['location'] = location
+		param['ip']       = listen_ip
+		param['port']      = listen_port
+		url_values = urllib.urlencode(param)
+		url = 'http://cs302.pythonanywhere.com/report'
+		url_completed = url + '?' +url_values
+		feedback= urllib2.urlopen(url_completed).read()
+		if (feedback == "0, User and IP logged"):
+			return 0
+		else:
+			return 1
           
 def runMainApp():
     # Create an instance of MainApp and tell Cherrypy to send all requests under / to it. (ie all of them)
