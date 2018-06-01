@@ -16,7 +16,8 @@ import urllib2
 import json
 import socket
 import sqlite3
-
+from jinja2 import Environment, FileSystemLoader
+env = Environment(loader=FileSystemLoader('template'))
 
 # The address we listen for connections on
 listen_ip = socket.gethostbyname(socket.gethostname())
@@ -51,17 +52,29 @@ class MainApp(object):
 	# PAGES (which return HTML that can be viewed in browser)
 	@cherrypy.expose
 	def index(self):
-		return open('Index.html')
+		return open('template/Index.html')
 	@cherrypy.expose
 	def login(self):
-		return open('Login.html')
+		return open('template/Login.html')
 	@cherrypy.expose
 	def logoff(self):
-		return open('Logoff.html')
+		return open('template/Logoff.html')
 	@cherrypy.expose
 	def onlineUsers(self):
-		return open('onlineUsers.html')
-	
+		return open('template/onlineUsers.html')
+	@cherrypy.expose
+	def userlist(self):
+		temp = env.get_template('onlineUsers.html')
+		conn = sqlite3.connect('302python.db')
+		c = conn.cursor()
+		c.execute("select username, ip, port, lastlogin from OnlineUsers")
+		list=[]
+		
+		for row in c.fetchall():
+			list.append(row)
+		print list
+		return temp.render(listOfUsers = list)
+		
 	@cherrypy.expose
 	def ping(self, sender):
 		# This API allows other users to check is the client is still there
@@ -101,12 +114,15 @@ class MainApp(object):
 			raise cherrypy.HTTPRedirect('/index')
 		else:
 			raise cherrypy.HTTPRedirect('/logoff')
+			
 	@cherrypy.expose
 	def getUsers(self):	
 		conn = sqlite3.connect('302python.db')
 		c = conn.cursor()
 		username = cherrypy.session.get('username')
 		password = cherrypy.session.get('password')
+		if (password == None):
+			raise cherrypy.HTTPRedirect('/login')
 		# Connecting to the database file
 		clear = 'DELETE FROM OnlineUsers'
 		c.execute(clear)
@@ -122,7 +138,8 @@ class MainApp(object):
 			c.execute(command)
 		conn.commit()
 		conn.close()
-		raise cherrypy.HTTPRedirect('/')
+		raise cherrypy.HTTPRedirect('/userlist')
+		
 	@cherrypy.expose
 	def getList(self, username, password):
 		hashword = hashlib.sha256()
