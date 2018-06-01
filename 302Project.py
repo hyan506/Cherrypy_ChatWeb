@@ -15,16 +15,18 @@ import urllib
 import urllib2
 import json
 import socket
-
+import sqlite3
 
 
 # The address we listen for connections on
 listen_ip = socket.gethostbyname(socket.gethostname())
 
-if '10.103' in listen_ip:
-	location = '0'
+if '172.23' in listen_ip:
+    location = '1'
+elif '10.103' in listen_ip:
+    location = '0'
 else:
-	location = '2'
+    location = '2'
 	
 listen_port = 10001
 
@@ -60,6 +62,11 @@ class MainApp(object):
 	def onlineUsers(self):
 		return open('onlineUsers.html')
 	
+	@cherrypy.expose
+	def ping(self, sender):
+		# This API allows other users to check is the client is still there
+		errorCode = 0
+		return str(errorCode)
 
 	# LOGGING IN AND OUT
 	@cherrypy.expose
@@ -67,22 +74,24 @@ class MainApp(object):
 		"""Check their name and password and send them either to the main page, or back to the main login screen."""
 		error = self.authoriseUserLogin(username,password)
 		if (error == 0):
-			cherrypy.session['username'] = username;
+			cherrypy.session['username'] = username
+			cherrypy.session['password'] = password
 			raise cherrypy.HTTPRedirect('/onlineUsers')
 		else:
 			raise cherrypy.HTTPRedirect('/login')
 
 	@cherrypy.expose
-	def signout(self, username, password):
+	def signout(self):
 		"""Logs the current user out, expires their session"""
 		username = cherrypy.session.get('username')
+		password = cherrypy.session.get('password')
 		hashword = hashlib.sha256()
 		hashword.update(password)
 		hashword.update(username)
 		variable = {}
 		variable['username'] = username
 		variable['password'] = hashword.hexdigest()
-		variable['enc'] = 1
+		variable['enc'] = 0
 		url_values = urllib.urlencode(variable)
 		url = 'http://cs302.pythonanywhere.com/logoff'
 		url_completed = url + '?' +url_values
@@ -92,11 +101,30 @@ class MainApp(object):
 			raise cherrypy.HTTPRedirect('/index')
 		else:
 			raise cherrypy.HTTPRedirect('/logoff')
-
 	@cherrypy.expose
-	def getUsers(self, username, password):
-		username = "hyan506"
-		password = "flightperception"
+	def getUsers(self):	
+		conn = sqlite3.connect('302python.db')
+		c = conn.cursor()
+		username = cherrypy.session.get('username')
+		password = cherrypy.session.get('password')
+		# Connecting to the database file
+		clear = 'DELETE FROM OnlineUsers'
+		c.execute(clear)
+		userlist = self.getList(username, password)
+		data = json.loads(userlist)
+		for x in range(len(data)):
+			username = data[str(x)]['username']
+			ip = data[str(x)]['ip']
+			lastLogin = data[str(x)]['lastLogin']
+			port = data[str(x)]['port']
+			string = """INSERT OR IGNORE INTO OnlineUsers (username,ip,port,lastlogin) VALUES ("{a}","{b}","{c}","{d}");"""
+			command = string.format(a=username,b=ip,c=port,d=lastLogin)
+			c.execute(command)
+		conn.commit()
+		conn.close()
+		raise cherrypy.HTTPRedirect('/')
+	@cherrypy.expose
+	def getList(self, username, password):
 		hashword = hashlib.sha256()
 		hashword.update(password)
 		hashword.update(username)
@@ -109,7 +137,7 @@ class MainApp(object):
 		url = 'http://cs302.pythonanywhere.com/getList'
 		url_completed = url + '?' +url_values
 		feedback = urllib2.urlopen(url_completed).read()
-		print feedback
+		return feedback
 	
 	def authoriseUserLogin(self, username, password):
 		if(username == '' or password == ''):
@@ -127,6 +155,7 @@ class MainApp(object):
 		url = 'http://cs302.pythonanywhere.com/report'
 		url_completed = url + '?' +url_values
 		feedback= urllib2.urlopen(url_completed).read()
+		print feedback
 		if (feedback == "0, User and IP logged"):
 			return 0
 		else:
