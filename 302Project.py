@@ -16,6 +16,8 @@ import urllib2
 import json
 import socket
 import sqlite3
+import time
+import datetime
 from jinja2 import Environment, FileSystemLoader
 env = Environment(loader=FileSystemLoader('template'))
 
@@ -61,9 +63,6 @@ class MainApp(object):
 		return open('template/Logoff.html')
 	@cherrypy.expose
 	def onlineUsers(self):
-		return open('template/onlineUsers.html')
-	@cherrypy.expose
-	def userlist(self):
 		temp = env.get_template('onlineUsers.html')
 		conn = sqlite3.connect('302python.db')
 		c = conn.cursor()
@@ -78,8 +77,9 @@ class MainApp(object):
 	@cherrypy.expose
 	def ping(self, sender):
 		# This API allows other users to check is the client is still there
-		errorCode = 0
-		return str(errorCode)
+		print "--PING----PING----PING----PING----PING----PING----PING----PING----PING----PING--"
+		print "You just pinged by " + sender
+		return '0'
 
 	# LOGGING IN AND OUT
 	@cherrypy.expose
@@ -131,14 +131,17 @@ class MainApp(object):
 		for x in range(len(data)):
 			username = data[str(x)]['username']
 			ip = data[str(x)]['ip']
-			lastLogin = data[str(x)]['lastLogin']
+			location = data[str(x)]['location']
+			lastLogin = datetime.datetime.fromtimestamp(
+				int(data[str(x)]['lastLogin'])
+			).strftime('%Y-%m-%d %H:%M:%S')
 			port = data[str(x)]['port']
-			string = """INSERT OR IGNORE INTO OnlineUsers (username,ip,port,lastlogin) VALUES ("{a}","{b}","{c}","{d}");"""
-			command = string.format(a=username,b=ip,c=port,d=lastLogin)
+			string = """INSERT OR IGNORE INTO OnlineUsers (username,ip,port,location,lastlogin) VALUES ("{a}","{b}","{c}","{d}","{e}");"""
+			command = string.format(a=username,b=ip,c=location,d=port,e=lastLogin)
 			c.execute(command)
 		conn.commit()
 		conn.close()
-		raise cherrypy.HTTPRedirect('/userlist')
+		raise cherrypy.HTTPRedirect('/onlineUsers')
 		
 	@cherrypy.expose
 	def getList(self, username, password):
@@ -155,7 +158,8 @@ class MainApp(object):
 		url_completed = url + '?' +url_values
 		feedback = urllib2.urlopen(url_completed).read()
 		return feedback
-	
+
+		
 	def authoriseUserLogin(self, username, password):
 		if(username == '' or password == ''):
 			return 1
@@ -166,7 +170,7 @@ class MainApp(object):
 		variable['username'] = username
 		variable['password'] = hashword.hexdigest()
 		variable['location'] = location
-		variable['ip']       = listen_ip
+		variable['ip']       = '172.23.153.95'
 		variable['port']      = listen_port
 		url_values = urllib.urlencode(variable)
 		url = 'http://cs302.pythonanywhere.com/report'
