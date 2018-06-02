@@ -18,7 +18,6 @@ url_values = urllib.urlencode(variable)
 url = 'http://cs302.pythonanywhere.com/getList'
 url_completed = url + '?' +url_values
 feedback = urllib2.urlopen(url_completed).read()
-print feedback
 
 
 
@@ -41,12 +40,18 @@ for x in range(len(data)):
 	ip = data[str(x)]['ip']
 	lastLogin = data[str(x)]['lastLogin']
 	port = data[str(x)]['port']
-	
+	location = data[str(x)]['location']
 	string = """INSERT OR IGNORE INTO OnlineUsers (username,ip,port,lastlogin) VALUES ("{a}","{b}","{c}","{d}");"""
 	command = string.format(a=username,b=ip,c=port,d=lastLogin)
-	print command
 	c.execute(command)
+	
+c.execute('SELECT ip FROM OnlineUsers WHERE username=?',(username,))
+ip=c.fetchone()
+print ip[0]
 
+c.execute('SELECT port FROM OnlineUsers WHERE username=?',(username,))
+port=c.fetchone()
+print port[0]
 '''
 # A) Adding a new column without a row value
 c.execute("ALTER TABLE {tn} ADD COLUMN '{cn}' {ct}"\

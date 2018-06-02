@@ -23,27 +23,46 @@ html,body,h1,h2,h3,h4,h5,h6 {font-family: "Roboto", sans-serif;}
 	<a href="logoff" class="w3-bar-item w3-button w3-padding-large w3-hover-white">LOGOFF</a>
   </div>
 </div>
-
-<header class="w3-container w3-black w3-center" style="padding:128px 16px">
-	<a href="getUsers" class="w3-button">getUsers</a>
-	<table class="table" align="center" id="usernamelist">
-		<tr><td>UserName</td>
-			<td>Ip		</td>
-			<td>location	</td>
-			<td>Last Login</td></tr>
+<style>
+    section { border:2px solid white; padding:10px; overflow:hidden; }
+    section > section { float:left; }
+    .indent-1 { padding-center:120px; }
+</style>
+<header class="w3-container w3-black w3-top_center" style="padding:128px 16px">
+<section class="indent-1">
+    <!-- Section 1 --> 
+    <section>
+        <a href="getUsers" class="w3-button">Refresh</a>
+		<td>Online User List</td>
+		<table class="table" align="center" id="usernamelist">
+			<tr><td>UserName</td>
+				<td>Ip		</td>
+				<td>location	</td>
+				<td>Last Login</td></tr>
 			
-	{% for item in listOfUsers%}
-		<tr><td>{{item[0]}}</td>
-			<td>{{item[1]}}</td>
-			<td>{{item[2]}}</td>
-			<td>{{item[3]}}</td></tr>
-	{% endfor %}
-	</table>
+		{% for item in listOfUsers%}
+			<tr><td>{{item[0]}}</td>
+				<td>{{item[1]}}</td>
+				<td>{{item[2]}}</td>
+				<td>{{item[3]}}</td></tr>
+		{% endfor %}
+		</table>
+    </section>
+
+    <!-- Section 2 -->
+    <section>
+        	<form action="/sendMessage" method="post" enctype="multipart/form-data">
+				Send to:   <input type="text" name="receiver"/><br/>
+			<p></p>
+				Message: <input type="text" name="message"/><br/>
+			<p></p>
+			<input type="submit" value="Send Message"/></form>
+    </section>
+</section>
 </header>
-<header class="w3-container w3-white w3-center" style="padding:256px 16px">
-	{% block content %}{% endblock %}
-	
-</header>
+
+
+
 <footer id="myFooter">
     <div class="w3-container w3-theme-l1">
 	<p>This is the 302 Python Project.</p>

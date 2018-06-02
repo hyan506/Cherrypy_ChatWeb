@@ -4,7 +4,8 @@ import urllib
 import urllib2
 import json
 import socket
-
+import time
+import datetime
 listen_ip = socket.gethostbyname(socket.gethostname())
 print listen_ip
 if '172.23' in listen_ip:
@@ -32,6 +33,14 @@ url_completed = url + '?' +url_values
 feedback = urllib2.urlopen(url_completed).read()
 print feedback
 
+sender = "someone"
+receiver = "receiver"
+variable = {}
+variable['sender'] = sender
+variable['destination'] = receiver
+variable['message'] = "Hello, testing"
+variable['stamp '] = time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(float(time.mktime(time.localtime()))))
+url_values = urllib.urlencode(variable)
 		
 hashword = hashlib.sha256()
 hashword.update(password)

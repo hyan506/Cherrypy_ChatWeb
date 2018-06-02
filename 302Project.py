@@ -66,12 +66,11 @@ class MainApp(object):
 		temp = env.get_template('onlineUsers.html')
 		conn = sqlite3.connect('302python.db')
 		c = conn.cursor()
-		c.execute("select username, ip, port, lastlogin from OnlineUsers")
+		c.execute("select username, ip, location, lastlogin from OnlineUsers")
 		list=[]
-		
 		for row in c.fetchall():
 			list.append(row)
-		print list
+		#print list
 		return temp.render(listOfUsers = list)
 		
 	@cherrypy.expose
@@ -89,7 +88,7 @@ class MainApp(object):
 		if (error == 0):
 			cherrypy.session['username'] = username
 			cherrypy.session['password'] = password
-			raise cherrypy.HTTPRedirect('/onlineUsers')
+			raise cherrypy.HTTPRedirect('/getUsers')
 		else:
 			raise cherrypy.HTTPRedirect('/login')
 
@@ -131,13 +130,13 @@ class MainApp(object):
 		for x in range(len(data)):
 			username = data[str(x)]['username']
 			ip = data[str(x)]['ip']
+			port = data[str(x)]['port']
 			location = data[str(x)]['location']
 			lastLogin = datetime.datetime.fromtimestamp(
 				int(data[str(x)]['lastLogin'])
 			).strftime('%Y-%m-%d %H:%M:%S')
-			port = data[str(x)]['port']
 			string = """INSERT OR IGNORE INTO OnlineUsers (username,ip,port,location,lastlogin) VALUES ("{a}","{b}","{c}","{d}","{e}");"""
-			command = string.format(a=username,b=ip,c=location,d=port,e=lastLogin)
+			command = string.format(a=username,b=ip,c=port,d=location,e=lastLogin)
 			c.execute(command)
 		conn.commit()
 		conn.close()
@@ -158,7 +157,53 @@ class MainApp(object):
 		url_completed = url + '?' +url_values
 		feedback = urllib2.urlopen(url_completed).read()
 		return feedback
-
+		
+	@cherrypy.expose
+	def sendMessage(self, receiver, message):
+		"""Call receiveMessage on the receiver's side"""
+		sender = cherrypy.session.get('username')
+		ip = self.findIp(receiver)
+		port = self.findPort(receiver)
+		variable = {}
+		variable['sender'] = sender
+		variable['destination'] = receiver
+		variable['message'] = message
+		stamp = time.time()
+		variable['stamp'] = stamp
+		data = json.dumps(variable) 
+		url = 'http://' + str(ip) + ':' + str(port) + '/receiveMessage'
+		req = urllib2.Request(url,data,{'Content-Type':'application/json'})
+		feedback = urllib2.urlopen(req)
+		return '0, action success'
+	@cherrypy.expose
+	@cherrypy.tools.json_in()
+	def receiveMessage(self):
+		# This API allows other users to send messages to this client
+		currentTime = time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(float(time.mktime(time.localtime()))))
+		conn = sqlite3.connect('302python.db')
+		c = conn.cursor()
+		sender = cherrypy.request.json['sender']
+		message = cherrypy.request.json['message']
+		c.execute('INSERT INTO MessageReceived VALUES(?, ?, ?)', (currentTime, sender, message))
+		conn.commit()
+		conn.close()
+		print message
+		print "Message received from "+sender
+		return '0: <Action was successful> '
+		
+	def findIp(self,username):
+		conn = sqlite3.connect('302python.db')
+		c = conn.cursor()
+		c.execute('SELECT ip FROM OnlineUsers WHERE username=?',(username,))
+		ip=c.fetchone()
+		return ip[0]
+		
+	def findPort(self,username):
+		conn = sqlite3.connect('302python.db')
+		c = conn.cursor()
+		c.execute('SELECT port FROM OnlineUsers WHERE username=?',(username,))
+		port=c.fetchone()
+		return port[0]
 		
 	def authoriseUserLogin(self, username, password):
 		if(username == '' or password == ''):
@@ -170,7 +215,7 @@ class MainApp(object):
 		variable['username'] = username
 		variable['password'] = hashword.hexdigest()
 		variable['location'] = location
-		variable['ip']       = '172.23.153.95'
+		variable['ip']       = listen_ip
 		variable['port']      = listen_port
 		url_values = urllib.urlencode(variable)
 		url = 'http://cs302.pythonanywhere.com/report'
