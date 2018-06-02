@@ -18,6 +18,8 @@ import socket
 import sqlite3
 import time
 import datetime
+import toolbox
+import database_toolbox
 from jinja2 import Environment, FileSystemLoader
 env = Environment(loader=FileSystemLoader('template'))
 
@@ -35,6 +37,17 @@ listen_port = 10001
 
 
 
+def getList(username, password):
+	variable = {}
+	variable['username'] = username
+	variable['password'] = password.hexdigest()
+	variable['enc'] = 0
+	variable['json'] = 1
+	url_values = urllib.urlencode(variable)
+	url = 'http://cs302.pythonanywhere.com/getList'
+	url_completed = url + '?' +url_values
+	feedback = urllib2.urlopen(url_completed).read()
+	return feedback
 class MainApp(object):
 
 	#CherryPy Configuration
@@ -84,10 +97,11 @@ class MainApp(object):
 	@cherrypy.expose
 	def signin(self, username, password):
 		"""Check their name and password and send them either to the main page, or back to the main login screen."""
-		error = self.authoriseUserLogin(username,password)
+		hashword = toolbox.passowrdhash(username,password)
+		error = self.authoriseUserLogin(username,hashword)
 		if (error == 0):
 			cherrypy.session['username'] = username
-			cherrypy.session['password'] = password
+			cherrypy.session['password'] = hashword
 			raise cherrypy.HTTPRedirect('/getUsers')
 		else:
 			raise cherrypy.HTTPRedirect('/login')
@@ -97,12 +111,9 @@ class MainApp(object):
 		"""Logs the current user out, expires their session"""
 		username = cherrypy.session.get('username')
 		password = cherrypy.session.get('password')
-		hashword = hashlib.sha256()
-		hashword.update(password)
-		hashword.update(username)
 		variable = {}
 		variable['username'] = username
-		variable['password'] = hashword.hexdigest()
+		variable['password'] = password.hexdigest()
 		variable['enc'] = 0
 		url_values = urllib.urlencode(variable)
 		url = 'http://cs302.pythonanywhere.com/logoff'
@@ -116,54 +127,29 @@ class MainApp(object):
 			
 	@cherrypy.expose
 	def getUsers(self):	
-		conn = sqlite3.connect('302python.db')
-		c = conn.cursor()
 		username = cherrypy.session.get('username')
 		password = cherrypy.session.get('password')
-		if (password == None):
+		if (password == None or username == None):
 			raise cherrypy.HTTPRedirect('/login')
 		# Connecting to the database file
-		clear = 'DELETE FROM OnlineUsers'
-		c.execute(clear)
-		userlist = self.getList(username, password)
+		userlist = getList(username, password)
 		data = json.loads(userlist)
-		for x in range(len(data)):
-			username = data[str(x)]['username']
-			ip = data[str(x)]['ip']
-			port = data[str(x)]['port']
-			location = data[str(x)]['location']
-			lastLogin = datetime.datetime.fromtimestamp(
-				int(data[str(x)]['lastLogin'])
-			).strftime('%Y-%m-%d %H:%M:%S')
-			string = """INSERT OR IGNORE INTO OnlineUsers (username,ip,port,location,lastlogin) VALUES ("{a}","{b}","{c}","{d}","{e}");"""
-			command = string.format(a=username,b=ip,c=port,d=location,e=lastLogin)
-			c.execute(command)
-		conn.commit()
-		conn.close()
+		database_toolbox.OnlineUserDatabase(data)
 		raise cherrypy.HTTPRedirect('/onlineUsers')
 		
-	@cherrypy.expose
-	def getList(self, username, password):
-		hashword = hashlib.sha256()
-		hashword.update(password)
-		hashword.update(username)
-		variable = {}
-		variable['username'] = username
-		variable['password'] = hashword.hexdigest()
-		variable['enc'] = 0
-		variable['json'] = 1
-		url_values = urllib.urlencode(variable)
-		url = 'http://cs302.pythonanywhere.com/getList'
-		url_completed = url + '?' +url_values
-		feedback = urllib2.urlopen(url_completed).read()
-		return feedback
+	
+
 		
 	@cherrypy.expose
-	def sendMessage(self, receiver, message):
+	def sendMessage(self, receiver = '', message = ''):
 		"""Call receiveMessage on the receiver's side"""
 		sender = cherrypy.session.get('username')
-		ip = self.findIp(receiver)
-		port = self.findPort(receiver)
+		if (sender == None):
+			raise cherrypy.HTTPRedirect('/login')
+		if (receiver == '' or message == ''):
+			raise cherrypy.HTTPRedirect('/onlineUsers')
+		ip = database_toolbox.findIp(receiver)
+		port = database_toolbox.findPort(receiver)
 		variable = {}
 		variable['sender'] = sender
 		variable['destination'] = receiver
@@ -174,48 +160,55 @@ class MainApp(object):
 		url = 'http://' + str(ip) + ':' + str(port) + '/receiveMessage'
 		req = urllib2.Request(url,data,{'Content-Type':'application/json'})
 		feedback = urllib2.urlopen(req)
-		return '0, action success'
+		return '0: <Action was successful>'
+		
 	@cherrypy.expose
 	@cherrypy.tools.json_in()
 	def receiveMessage(self):
 		# This API allows other users to send messages to this client
 		currentTime = time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(float(time.mktime(time.localtime()))))
+		sender = cherrypy.request.json['sender']
+		message = cherrypy.request.json['message']
+		database_toolbox.ReceiveMessageDatabase(currentTime, sender, message)
+		print message
+		print "Message received from "+sender
+		return '0: <Action was successful>'
+	
+	@cherrypy.expose
+	@cherrypy.tools.json_in()
+	def receiveFile(self):
 		conn = sqlite3.connect('302python.db')
 		c = conn.cursor()
 		sender = cherrypy.request.json['sender']
-		message = cherrypy.request.json['message']
-		c.execute('INSERT INTO MessageReceived VALUES(?, ?, ?)', (currentTime, sender, message))
+		filename = cherrypy.request.json['filename']
+		content_type = cherrypy.request.json['content_type']
+		stamp = cherrypy.request.json['stamp']
+		time = datetime.datetime.fromtimestamp(
+		int(stamp)
+		).strftime('%Y-%m-%d %H:%M:%S')
+		c.execute('INSERT INTO FileReceived VALUES(?, ?, ?, ?)',
+		(time, sender, filename, content_type))
 		conn.commit()
 		conn.close()
-		print message
+		file = cherrypy.request.json['file']
+		fileContent = self.decode_base64(file)
+		f = open(filename, 'w')
+		f.write(fileContent)
+		f.close()
 		print "Message received from "+sender
-		return '0: <Action was successful> '
+		return '0: <Action was successful>'	
+
 		
-	def findIp(self,username):
-		conn = sqlite3.connect('302python.db')
-		c = conn.cursor()
-		c.execute('SELECT ip FROM OnlineUsers WHERE username=?',(username,))
-		ip=c.fetchone()
-		return ip[0]
-		
-	def findPort(self,username):
-		conn = sqlite3.connect('302python.db')
-		c = conn.cursor()
-		c.execute('SELECT port FROM OnlineUsers WHERE username=?',(username,))
-		port=c.fetchone()
-		return port[0]
+
 		
 	def authoriseUserLogin(self, username, password):
 		if(username == '' or password == ''):
 			return 1
-		hashword = hashlib.sha256()
-		hashword.update(password)
-		hashword.update(username)
 		variable = {}
 		variable['username'] = username
-		variable['password'] = hashword.hexdigest()
+		variable['password'] = password.hexdigest()
 		variable['location'] = location
-		variable['ip']       = listen_ip
+		variable['ip']       = '172.23.153.95'
 		variable['port']      = listen_port
 		url_values = urllib.urlencode(variable)
 		url = 'http://cs302.pythonanywhere.com/report'
