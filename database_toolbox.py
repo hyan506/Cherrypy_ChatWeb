@@ -19,13 +19,22 @@ def OnlineUserDatabase(data):
 	conn.commit()
 	conn.close()
 
-def ReceiveMessageDatabase(currentTime, sender, message):
+def MessageDatabase(currentTime, sender, message, receicer):
 	conn = sqlite3.connect('302python.db')
 	c = conn.cursor()
-	c.execute('INSERT INTO MessageReceived VALUES(?, ?, ?)',
-	(currentTime, sender, message))
+	c.execute('INSERT INTO Message VALUES(?, ?, ?, ?)',
+	(currentTime, sender, message, receicer))
 	conn.commit()
 	conn.close()
+
+def ReceiveFileDatabase(time, sender, filename, content_type):
+	conn = sqlite3.connect('302python.db')
+	c = conn.cursor()
+	c.execute('INSERT INTO FileReceived VALUES(?, ?, ?, ?)',
+	(time, sender, filename, content_type))
+	conn.commit()
+	conn.close()
+	
 	
 def findIp(username):
 	conn = sqlite3.connect('302python.db')
