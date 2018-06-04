@@ -43,17 +43,7 @@ listen_port = 10001
 
 
 
-def getList(username, password):
-	variable = {}
-	variable['username'] = username
-	variable['password'] = password.hexdigest()
-	variable['enc'] = 0
-	variable['json'] = 1
-	url_values = urllib.urlencode(variable)
-	url = 'http://cs302.pythonanywhere.com/getList'
-	url_completed = url + '?' +url_values
-	feedback = urllib2.urlopen(url_completed).read()
-	return feedback
+
 class MainApp(object):
 
 	#CherryPy Configuration
@@ -70,7 +60,7 @@ class MainApp(object):
 		cherrypy.response.status = 404
 		return Page
 
-	# PAGES (which return HTML that can be viewed in browser)
+	# PAGES ---------------------------------------Start-------------------------------
 	@cherrypy.expose
 	def index(self):
 		return open('template/Index.html')
@@ -80,6 +70,27 @@ class MainApp(object):
 	@cherrypy.expose
 	def logoff(self):
 		return open('template/Logoff.html')
+	@cherrypy.expose
+	def profile(self):
+		temp = env.get_template('Profile.html')
+		username = cherrypy.session.get('username')
+		conn = sqlite3.connect('302python.db')
+		c = conn.cursor()
+		c.execute("select fullname,position,description,location,picture from Profile WHERE username=?",(username,))
+		profilelist={}
+		list=[]
+		for row in c.fetchone():
+			list.append(row)
+		profilelist['fullname'] = list[0]
+		profilelist['position'] = list[1]
+		profilelist['description'] = list[2]
+		profilelist['location'] = list[3]
+		profilelist['picture'] = list[4]
+		print profilelist
+		return temp.render(listOfProfile = profilelist)
+	@cherrypy.expose
+	def EditProfilePage(self):
+		return open('template/EditProfile.html')
 	@cherrypy.expose
 	def onlineUsers(self,**kwargs):
 		temp = env.get_template('onlineUsers.html')
@@ -100,15 +111,9 @@ class MainApp(object):
 	def openChatbox(self, username):
 		direct = '/onlineUsers?username='+username
 		raise cherrypy.HTTPRedirect(direct)
-		
-	@cherrypy.expose
-	def ping(self, sender):
-		# This API allows other users to check is the client is still there
-		print "--PING----PING----PING----PING----PING----PING----PING----PING----PING----PING--"
-		print "You just pinged by " + sender
-		return '0'
+	# PAGES ---------------------------------------End-------------------------------	
 
-	# LOGGING IN AND OUT
+	# Login and Logoff ---------------------------------------Start-------------------------------	
 	@cherrypy.expose
 	def signin(self, username, password):
 		"""Check their name and password and send them either to the main page, or back to the main login screen."""
@@ -117,6 +122,7 @@ class MainApp(object):
 		if (error == 0):
 			cherrypy.session['username'] = username
 			cherrypy.session['password'] = hashword
+			database_toolbox.IfHasProfile(username)
 			raise cherrypy.HTTPRedirect('/getUsers')
 		else:
 			raise cherrypy.HTTPRedirect('/login')
@@ -136,10 +142,13 @@ class MainApp(object):
 		feedback = urllib2.urlopen(url_completed).read()
 		if (feedback == "0, Logged off successfully"):
 			cherrypy.lib.sessions.expire()
+			database_toolbox.ClearDatabase()
 			raise cherrypy.HTTPRedirect('/index')
 		else:
 			raise cherrypy.HTTPRedirect('/logoff')
-			
+	# Login and Logoff ---------------------------------------End-------------------------------	
+	
+	# Get Online Users ---------------------------------------Start-------------------------------
 	@cherrypy.expose
 	def getUsers(self):	
 		username = cherrypy.session.get('username')
@@ -147,14 +156,23 @@ class MainApp(object):
 		if (password == None or username == None):
 			raise cherrypy.HTTPRedirect('/login')
 		# Connecting to the database file
-		userlist = getList(username, password)
+		userlist = toolbox.getList(username, password)
 		data = json.loads(userlist)
 		database_toolbox.OnlineUserDatabase(data)
 		raise cherrypy.HTTPRedirect('/onlineUsers')
-		
-	
+	# Get Online Users ---------------------------------------End-------------------------------
 
-		
+	# Ping ---------------------------------------Start-------------------------------	
+	@cherrypy.expose
+	def ping(self, sender):
+		# This API allows other users to check is the client is still there
+		print "--PING----PING----PING----PING----PING----PING----PING----PING----PING----PING--"
+		print "You just pinged by " + sender
+		return '0'
+	# Ping ---------------------------------------End-------------------------------
+
+	# Send Message and File ---------------------------------------Start-------------------------------
+
 	@cherrypy.expose
 	def sendMessage(self, receiver = '', message = ''):
 		"""Call receiveMessage on the receiver's side"""
@@ -205,7 +223,15 @@ class MainApp(object):
 		req = urllib2.Request(url,data,{'Content-Type':'application/json'})
 		feedback = urllib2.urlopen(req)
 		print feedback
+		message = "You sent a file : \""+myFile.filename+ "\" "
+		currentTime = time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(float(time.mktime(time.localtime()))))
+		database_toolbox.MessageDatabase(currentTime, username, message,receiver)
 		self.openChatbox(receiver)
+	# Send Message and File ---------------------------------------End-------------------------------
+		
+		
+	# Receive Message and File ---------------------------------------Start-------------------------------
+	
 	@cherrypy.expose
 	@cherrypy.tools.json_in()
 	def receiveMessage(self):
@@ -213,7 +239,7 @@ class MainApp(object):
 		currentTime = time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(float(time.mktime(time.localtime()))))
 		sender = cherrypy.request.json['sender']
 		message = cherrypy.request.json['message']
-		receiver = cherrypy.session.get('username')
+		receiver = cherrypy.request.json['destination']
 		database_toolbox.MessageDatabase(currentTime, sender, message,receiver)
 		print message
 		print "Message received from "+sender
@@ -230,17 +256,45 @@ class MainApp(object):
 		time = datetime.datetime.fromtimestamp(
 		int(stamp)
 		).strftime('%Y-%m-%d %H:%M:%S')
+		receiver = cherrypy.request.json['destination']
 		database_toolbox.ReceiveFileDatabase(time, sender, filename, content_type)
+		message = "Sent a file \""+filename+ "\" to you"
+		database_toolbox.MessageDatabase(time, sender, message,receiver)
 		file = cherrypy.request.json['file']
-		imgdata = base64.b64decode(file)
-		#file.decode('base64')
+		data = base64.b64decode(file)
 		f = open(filename, 'wb')
-		f.write(imgdata)
+		f.write(data)
 		f.close()
 		print "Message received from "+sender
 		return '0: <Action was successful>'	
-
-		
+	# Receive Message and File ---------------------------------------End-------------------------------
+	
+	# Profile------------------------------------Start-----------------------------
+	@cherrypy.expose
+	def getProfile(self):
+		username = cherrypy.session.get('username')
+		list = database_toolbox.getProfileList(username)
+		'''variable = {}
+		variable['fullname'] = "Steven Yan"
+		variable['position'] = "Shooting Guard / Small Forward"
+		variable['description'] = "This is a Basketball Player"
+		variable['location'] = "China"
+		variable['picture'] = "https://pbs.twimg.com/media/DOsuNmmW4AEQPmg.jpg"
+		'''
+		profile = json.dumps(list)
+		print profile
+		return profile
+	@cherrypy.expose
+	def editProfile(self,fullname='Fullname Not Set', position='Position Not Set', description='Description Not Set', location='Location Not Set', picture='Picture Not Set'):
+        #This action allows users to change their profile page.
+		username = cherrypy.session.get('username')
+		database_toolbox.editProfile(fullname, position, description, location, picture, username)
+		raise cherrypy.HTTPRedirect('/profile')
+	@cherrypy.expose
+	@cherrypy.tools.json_in()
+	def askForProfile(self,profileOwner):
+		return profileOwner
+	# Profile------------------------------------End-------------------------------
 	def authoriseUserLogin(self, username, password):
 		if(username == '' or password == ''):
 			return 1
@@ -248,7 +302,7 @@ class MainApp(object):
 		variable['username'] = username
 		variable['password'] = password.hexdigest()
 		variable['location'] = location
-		variable['ip']       = report_ip
+		variable['ip']       = '172.23.153.95'
 		variable['port']      = listen_port
 		url_values = urllib.urlencode(variable)
 		url = 'http://cs302.pythonanywhere.com/report'

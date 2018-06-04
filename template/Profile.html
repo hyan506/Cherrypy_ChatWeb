@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<title>Online Users</title>
+<meta charset="UTF-8">
+<meta http-equiv="refresh" content="90">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+<link rel="stylesheet" href="https://www.w3schools.com/lib/w3-theme-black.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<style>
+html,body,h1,h2,h3,h4,h5,h6 {font-family: "Roboto", sans-serif;}
+</style>
+<body>
+
+<!-- Navbar -->
+<div class="w3-top">
+  <div class="w3-bar w3-theme w3-top w3-left-align w3-large">
+	<a href="index" class="w3-bar-item w3-button w3-padding-large w3-hover-white">HOME</a>
+    <a href="login" class="w3-bar-item w3-button w3-padding-large w3-hover-white">LOGIN</a>
+	<a href="onlineUsers" class="w3-bar-item w3-button w3-padding-large w3-hover-white">ONLINE USERS</a>
+	<a href="profile" class="w3-bar-item w3-button w3-padding-large w3-white">Profile</a>
+	<a href="logoff" class="w3-bar-item w3-button w3-padding-large w3-hover-white">LOGOFF</a>
+  </div>
+</div>
+
+<body class="w3-container w3-black w3-top_center" style="padding:80px 16px">
+	<p style="text-align:center"><font size="6"><b>Your Profile</b></font></p>
+	<p style="text-align:Left"><font size="5"><b>Fullname : {{listOfProfile['fullname']}}</b></p>
+	<p style="text-align:Left"><b>Description : {{listOfProfile['description']}}</b></p>
+	<p style="text-align:Left"><b>Location : {{listOfProfile['location']}}</b></p>
+	<p style="text-align:Left"><b>Position : {{listOfProfile['position']}}</b></p>
+	<p style="text-align:Left"><b>Picture : {{listOfProfile['picture']}}</b></p>
+	<a href="EditProfilePage" class="w3-button w3-padding-large w3-white">Edit</a></font>
+</body>
+
+<footer id="myFooter">
+    <div class="w3-container w3-theme-l1">
+	<p>This is the 302 Python Project.</p>
+    <p>Steven Yan</p>
+    </div>
+  </footer>
+</div>
+</body>
+</html>

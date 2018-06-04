@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<title>Online Users</title>
+<meta charset="UTF-8">
+<meta http-equiv="refresh" content="90">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+<link rel="stylesheet" href="https://www.w3schools.com/lib/w3-theme-black.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<style>
+html,body,h1,h2,h3,h4,h5,h6 {font-family: "Roboto", sans-serif;}
+</style>
+<body>
+
+<!-- Navbar -->
+<div class="w3-top">
+  <div class="w3-bar w3-theme w3-top w3-left-align w3-large">
+	<a href="profile" class="w3-bar-item w3-button w3-padding-large w3-hover-white">Back To Profile</a>
+  </div>
+</div>
+
+<body class="w3-container w3-black w3-top_center" style="padding:80px 16px">
+<section class="indent-1" align = "center">
+    <!-- Section 1 --> 
+	<form action="/editProfile" method="post" enctype="multipart/form-data">
+				<p style="text-align:center"><font size="6"><b>Edit Your Profile</b></font></p>
+				<p ><font size="5"><b>Fullname : </b><br/></p></font>
+				<input type="text" size="35" name="fullname"/>
+				<p ><font size="5"><b>Description : </b></p></font>
+				<input type="text" size="35" name="description"/>
+				<p ><font size="5"><b>Location : </b></p></font>
+				<input type="text" size="35" name="location"/>
+				<p ><font size="5"><b>Position : </b></p></font>
+				<input type="text" size="35" name="position"/>
+				<p ><font size="5"><b>Picture : </b></p></font>
+				<input type="text" size="35" name="picture"/>
+			<p></p>
+			<input type="submit" class="w3-button w3-white w3-opacity w3-hover-opacity-off" value="Submit New Profile"/></form>
+</section>
+</body>
+
+<footer id="myFooter">
+    <div class="w3-container w3-theme-l1">
+	<p>This is the 302 Python Project.</p>
+    <p>Steven Yan</p>
+    </div>
+  </footer>
+</div>
+</body>
+</html>

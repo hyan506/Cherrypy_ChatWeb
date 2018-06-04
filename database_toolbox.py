@@ -35,7 +35,59 @@ def ReceiveFileDatabase(time, sender, filename, content_type):
 	conn.commit()
 	conn.close()
 	
+def ClearDatabase():
+	conn = sqlite3.connect('302python.db')
+	c = conn.cursor()
+	clear = 'DELETE FROM OnlineUsers'
+	c.execute(clear)
+	clear = 'DELETE FROM FileReceived'
+	c.execute(clear)
+	clear = 'DELETE FROM Message'
+	c.execute(clear)
+	conn.commit()
+	conn.close()
 	
+def IfHasProfile(username):
+	conn = sqlite3.connect('302python.db')
+	c = conn.cursor()
+	c.execute("SELECT 1 FROM Profile WHERE EXISTS (SELECT username FROM Profile WHERE username=?)",(username,))
+	if c.fetchone():
+		print("Found!")
+	else:
+		print("Not found...")
+		c.execute('INSERT INTO Profile VALUES(?,?,?,?,?,?)',
+		(username,'Fullname Not Set','Description Not Set','Location Not Set','Picture Not Set','Position Not Set'))
+	conn.commit()
+	conn.close()
+def getProfileList(username):
+	conn = sqlite3.connect('302python.db')
+	c = conn.cursor()
+	c.execute("SELECT fullname,position,description,location,picture FROM Profile WHERE username=?",(username,))
+	variablelist={}
+	list = []
+	for row in c.fetchone():
+		print row
+		list.append(row)
+	variablelist['fullname'] = list[0]
+	variablelist['position'] = list[1]
+	variablelist['description'] = list[2]
+	variablelist['location'] = list[3]
+	variablelist['picture'] = list[4]
+	conn.commit()
+	conn.close()
+	return variablelist
+def editProfile(fullname, position, description, location, picture, username):
+	conn = sqlite3.connect('302python.db')
+	if(fullname == ''):fullname ='Fullname Not Set'
+	if(position == ''):position ='Position Not Set'
+	if(description == ''):description ='Description Not Set'
+	if(location == ''):location ='Location Not Set'
+	if(picture == ''):picture ='Picture Not Set'
+	
+	c = conn.cursor()
+	c.execute('UPDATE profile SET fullname = ?, position = ?, description = ?, location = ?, picture = ? WHERE username = ?', (fullname, position, description, location, picture, username))
+	conn.commit()
+	conn.close()
 def findIp(username):
 	conn = sqlite3.connect('302python.db')
 	c = conn.cursor()
