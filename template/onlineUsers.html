@@ -86,8 +86,8 @@ html,body,h1,h2,h3,h4,h5,h6 {font-family: "Roboto", sans-serif;}
 			<input type="submit" class="w3-button w3-white w3-opacity w3-hover-opacity-off" value="Send Message"/></form>
 			<br></br>
 			<br></br>
-			<form action="/sendFile?receiver={{receiver}}">
-			<input type="file" name="pic" accept="file_extension|audio/*|video/*|image/*|media_type">
+			<form action="/sendFile?receiver={{receiver}}" method="post" enctype="multipart/form-data">
+			<input type="file" name="myFile" accept="file_extension|audio/*|video/*|image/*|media_type">
 			<br></br>
 			<input type="submit" class="w3-button w3-white w3-opacity w3-hover-opacity-off" value="Send File"/></form>
 </form>

@@ -31,6 +31,7 @@ env = Environment(loader=FileSystemLoader('template'))
 listen_ip = "0.0.0.0"
 report_ip = socket.gethostbyname(socket.gethostname())
 print report_ip
+print report_ip
 if '172.23' in report_ip:
     location = '1'
 elif '10.103' in report_ip:
@@ -182,19 +183,20 @@ class MainApp(object):
 		self.openChatbox(receiver)
 			
 	@cherrypy.expose
-	def sendFile(self, receiver, filename):
+	def sendFile(self, receiver, myFile):
 		username = cherrypy.session.get('username')
-		f = open(filename,'rb')
-		file64 = base64.b64encode(f.read())
-		f.close()
+		print "++++++++++++sending file to " + receiver + "++++++++++++++++++"
+		file64 = base64.b64encode(myFile.file.read())
 		ip = database_toolbox.findIp(receiver)
 		port = database_toolbox.findPort(receiver)
-		content_type = str(mimetypes.guess_type(filename)[0])
+		content_type = str(mimetypes.guess_type(myFile.filename)[0])
+		print "ContentType is " + content_type
+		print "FileName is " + myFile.filename
 		variable = {}
 		variable['sender'] = username
-		variable['destination'] = destination
+		variable['destination'] = receiver
 		variable['file'] = file64
-		variable['filename'] = filename
+		variable['filename'] = myFile.filename
 		variable['content_type'] = content_type
 		stamp = time.time()
 		variable['stamp'] = stamp
@@ -202,8 +204,8 @@ class MainApp(object):
 		data = json.dumps(variable)
 		req = urllib2.Request(url,data,{'Content-Type':'application/json'})
 		feedback = urllib2.urlopen(req)
-		print response
-		raise cherrypy.HTTPRedirect("/File")
+		print feedback
+		self.openChatbox(receiver)
 	@cherrypy.expose
 	@cherrypy.tools.json_in()
 	def receiveMessage(self):
@@ -246,7 +248,7 @@ class MainApp(object):
 		variable['username'] = username
 		variable['password'] = password.hexdigest()
 		variable['location'] = location
-		variable['ip']       = '172.23.153.95'
+		variable['ip']       = report_ip
 		variable['port']      = listen_port
 		url_values = urllib.urlencode(variable)
 		url = 'http://cs302.pythonanywhere.com/report'
