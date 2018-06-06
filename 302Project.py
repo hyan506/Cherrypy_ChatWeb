@@ -116,6 +116,7 @@ class MainApp(object):
 			cherrypy.session['password'] = hashword			#Store the hashed password in session
 			database_toolbox.IfHasProfile(username)			#Check if the current user has a profile in local database, if not, make one
 			kwargs=dict(username=username,password=hashword)
+			self.getUsers(username,hashword)
 			self.update(**kwargs)
 			raise cherrypy.HTTPRedirect('/onlineUsers')		
 		else:

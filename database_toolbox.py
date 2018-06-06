@@ -85,7 +85,7 @@ def getProfileList(username):					#Make the local profile into a list
 	variablelist={}
 	list = []
 	for row in c.fetchone():
-		print row
+		#print row
 		list.append(row)
 	variablelist['fullname'] = list[0]
 	variablelist['position'] = list[1]
