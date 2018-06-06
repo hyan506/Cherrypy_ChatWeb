@@ -346,7 +346,6 @@ class MainApp(object):
 			print "adsngiasngaskfgnrojgnaeiognaerohgaegawgasdfjgndgneraoginargaiorwgnadfsjhanr"
 			raise cherrypy.HTTPRedirect('/profile?owner='+profileOwner)
 		except:
-			print "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 			raise cherrypy.HTTPRedirect('/profile?owner='+profileOwner)
 			
 		
