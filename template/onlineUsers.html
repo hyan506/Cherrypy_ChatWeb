@@ -17,12 +17,12 @@ html,body,h1,h2,h3,h4,h5,h6 {font-family: "Roboto", sans-serif;}
 <div class="w3-top">
   <div class="w3-bar w3-theme w3-top w3-left-align w3-large">
     <a class="w3-bar-item w3-button w3-right w3-hide-large w3-hover-white w3-large w3-theme-l1" href="javascript:void(0)" onclick="w3_open()"><i class="fa fa-bars"></i></a>
-	<a href="index" class="w3-bar-item w3-button w3-padding-large w3-hover-white">HOME</a>
-	<a href="onlineUsers" class="w3-bar-item w3-button w3-padding-large w3-white">ONLINE USERS</a>
-	<a href="profile" class="w3-bar-item w3-button w3-padding-large w3-hover-white">Profile</a>
+	<a href="onlineUsers" class="w3-bar-item w3-button w3-padding-large w3-white">Home</a>
+	<a href="profile?owner={{currentUser}}" class="w3-bar-item w3-button w3-padding-large w3-hover-white">Profile</a>
 	<a href="logoff" class="w3-bar-item w3-button w3-padding-large w3-hover-white">LOGOFF</a>
   </div>
 </div>
+<div> Logged in as {{currentUser}}</div>
 <style>
     section { border:1px solid white;
 			padding:10px; 
@@ -46,7 +46,7 @@ html,body,h1,h2,h3,h4,h5,h6 {font-family: "Roboto", sans-serif;}
     <!-- Section 1 --> 
     <section >
 		
-        <a href="getUsers" class="w3-button w3-white w3-opacity w3-hover-opacity-off">Refresh</a>
+        <a href="onlineUsers" class="w3-button w3-white w3-opacity w3-hover-opacity-off">Refresh</a>
 		<p style="text-align:center"><b>Online User List</b></p>
 		<div class="scrollable" style="overflow-x:auto;">
 
@@ -56,7 +56,7 @@ html,body,h1,h2,h3,h4,h5,h6 {font-family: "Roboto", sans-serif;}
 				<td>Last Login</td></tr>
 			
 		{% for item in listOfUsers%}
-			<tr><td><a href="openChatbox?username={{item[0]}}" class="w3-white w3-button" style="text-align:center">{{item[0]}}</a></td>
+			<tr><td><a href="askForProfile?profileOwner={{item[0]}}" class="w3-white w3-button" style="text-align:center">{{item[0]}}</a></td>
 				<td>{{item[2]}}</td>
 				<td>{{item[3]}}</td>
 				<td><a href="openChatbox?username={{item[0]}}" class="w3-white w3-button">Send Message</a></td></tr>
@@ -90,8 +90,16 @@ html,body,h1,h2,h3,h4,h5,h6 {font-family: "Roboto", sans-serif;}
 			<input type="file" name="myFile" accept="file_extension|audio/*|video/*|image/*|media_type">
 			<br></br>
 			<input type="submit" class="w3-button w3-white w3-opacity w3-hover-opacity-off" value="Send File"/></form>
-</form>
+			</form>
     </section>
+	
+	<section>
+		<p>Notice Board</p>
+		{% for item in listOfNotice%}
+			<a href="openChatbox?username={{item[0]}}" class="w3-white w3-button" style="text-align:center">Received a {{item[1]}} from {{item[0]}}</a>
+			<br></br>
+		{% endfor %}
+	</section>
 
 </section>
 </body>

@@ -16,22 +16,31 @@ html,body,h1,h2,h3,h4,h5,h6 {font-family: "Roboto", sans-serif;}
 <!-- Navbar -->
 <div class="w3-top">
   <div class="w3-bar w3-theme w3-top w3-left-align w3-large">
-	<a href="index" class="w3-bar-item w3-button w3-padding-large w3-hover-white">HOME</a>
-    <a href="login" class="w3-bar-item w3-button w3-padding-large w3-hover-white">LOGIN</a>
-	<a href="onlineUsers" class="w3-bar-item w3-button w3-padding-large w3-hover-white">ONLINE USERS</a>
-	<a href="profile" class="w3-bar-item w3-button w3-padding-large w3-white">Profile</a>
+	<a href="onlineUsers" class="w3-bar-item w3-button w3-padding-large w3-hover-white">Home</a>
+	<a href="profile?owner={{owner}}" class="w3-bar-item w3-button w3-padding-large w3-white">Profile</a>
 	<a href="logoff" class="w3-bar-item w3-button w3-padding-large w3-hover-white">LOGOFF</a>
   </div>
 </div>
-
+<script language="javascript">
+            var profileOwner = {{owner}};
+			var CurrentUser = {{user}}
+            if(profileOwner === CurrentUser) {
+                document.getElementById("editbutton").style.visibility="hidden";
+            }
+			else{
+				document.getElementById("editbutton").style.visibility="visible";
+			}
+</script>
+<p>logged in as {{user}}</p>
 <body class="w3-container w3-black w3-top_center" style="padding:80px 16px">
-	<p style="text-align:center"><font size="6"><b>Your Profile</b></font></p>
+	<p style="text-align:center"><font size="6"><b>Profile of {{owner}}</b></font></p>
+	<img src="{{listOfProfile['picture']}}">
 	<p style="text-align:Left"><font size="5"><b>Fullname : {{listOfProfile['fullname']}}</b></p>
 	<p style="text-align:Left"><b>Description : {{listOfProfile['description']}}</b></p>
 	<p style="text-align:Left"><b>Location : {{listOfProfile['location']}}</b></p>
 	<p style="text-align:Left"><b>Position : {{listOfProfile['position']}}</b></p>
 	<p style="text-align:Left"><b>Picture : {{listOfProfile['picture']}}</b></p>
-	<a href="EditProfilePage" class="w3-button w3-padding-large w3-white">Edit</a></font>
+	<a href="EditProfilePage" id=editbutton class="w3-button w3-padding-large w3-white">Edit</a></font>
 </body>
 
 <footer id="myFooter">

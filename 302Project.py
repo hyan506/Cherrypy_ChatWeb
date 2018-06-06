@@ -20,7 +20,7 @@ import time
 import mimetypes
 import datetime
 import os, base64
-
+import threading
 
 import toolbox
 import database_toolbox
@@ -28,7 +28,7 @@ from jinja2 import Environment, FileSystemLoader
 env = Environment(loader=FileSystemLoader('template'))
 
 # The address we listen for connections on
-listen_ip = "0.0.0.0"
+listen_ip = '0.0.0.0'
 report_ip = socket.gethostbyname(socket.gethostname())
 print report_ip
 print report_ip
@@ -71,12 +71,12 @@ class MainApp(object):
 	def logoff(self):
 		return open('template/Logoff.html')
 	@cherrypy.expose
-	def profile(self):
+	def profile(self,owner):
 		temp = env.get_template('Profile.html')
 		username = cherrypy.session.get('username')
 		conn = sqlite3.connect('302python.db')
 		c = conn.cursor()
-		c.execute("select fullname,position,description,location,picture from Profile WHERE username=?",(username,))
+		c.execute("select fullname,position,description,location,picture from Profile WHERE username=?",(owner,))
 		profilelist={}
 		list=[]
 		for row in c.fetchone():
@@ -87,13 +87,16 @@ class MainApp(object):
 		profilelist['location'] = list[3]
 		profilelist['picture'] = list[4]
 		print profilelist
-		return temp.render(listOfProfile = profilelist)
+		return temp.render(listOfProfile = profilelist,owner = owner,user=username)
 	@cherrypy.expose
 	def EditProfilePage(self):
-		return open('template/EditProfile.html')
+		temp = env.get_template('EditProfile.html')
+		username = cherrypy.session.get('username')
+		return temp.render(user = username)
 	@cherrypy.expose
 	def onlineUsers(self,**kwargs):
 		temp = env.get_template('onlineUsers.html')
+		username = cherrypy.session.get('username')
 		conn = sqlite3.connect('302python.db')
 		c = conn.cursor()
 		c.execute("select username, ip, location, lastlogin from OnlineUsers")
@@ -105,10 +108,14 @@ class MainApp(object):
 		messagelist=[]
 		for row in c.fetchall():
 			messagelist.append(row)
-		
-		return temp.render(listOfUsers = userlist, receiver = name,listOfMessage = messagelist)
+		c.execute("SELECT source,type FROM Notice")
+		noticelist=[]
+		for row in c.fetchall():
+			noticelist.append(row)
+		return temp.render(currentUser = username, receiver = name, listOfUsers = userlist,listOfMessage = messagelist,listOfNotice = noticelist)
 	@cherrypy.expose
 	def openChatbox(self, username):
+		database_toolbox.ClearNoticeOf(username)
 		direct = '/onlineUsers?username='+username
 		raise cherrypy.HTTPRedirect(direct)
 	# PAGES ---------------------------------------End-------------------------------	
@@ -119,11 +126,18 @@ class MainApp(object):
 		"""Check their name and password and send them either to the main page, or back to the main login screen."""
 		hashword = toolbox.passowrdhash(username,password)
 		error = self.authoriseUserLogin(username,hashword)
+		
 		if (error == 0):
 			cherrypy.session['username'] = username
 			cherrypy.session['password'] = hashword
 			database_toolbox.IfHasProfile(username)
-			raise cherrypy.HTTPRedirect('/getUsers')
+			print "Threading start"
+			keeplogging = cherrypy.process.plugins.BackgroundTask(20, self.authoriseUserLogin,kwargs=dict(username=username,password=hashword))
+			keeplogging.start()
+			keepgetting = cherrypy.process.plugins.BackgroundTask(20, self.getUsers,kwargs=dict(username=username,password=hashword))
+			keepgetting.start()
+			self.getUsers(username,hashword)
+			raise cherrypy.HTTPRedirect('/onlineUsers')
 		else:
 			raise cherrypy.HTTPRedirect('/login')
 
@@ -150,16 +164,14 @@ class MainApp(object):
 	
 	# Get Online Users ---------------------------------------Start-------------------------------
 	@cherrypy.expose
-	def getUsers(self):	
-		username = cherrypy.session.get('username')
-		password = cherrypy.session.get('password')
+	def getUsers(self,username,password):	
 		if (password == None or username == None):
 			raise cherrypy.HTTPRedirect('/login')
 		# Connecting to the database file
-		userlist = toolbox.getList(username, password)
+		userlist = toolbox.getList(username, password.hexdigest())
 		data = json.loads(userlist)
 		database_toolbox.OnlineUserDatabase(data)
-		raise cherrypy.HTTPRedirect('/onlineUsers')
+		print "----------Got the newest list------------"
 	# Get Online Users ---------------------------------------End-------------------------------
 
 	# Ping ---------------------------------------Start-------------------------------	
@@ -257,12 +269,11 @@ class MainApp(object):
 		int(stamp)
 		).strftime('%Y-%m-%d %H:%M:%S')
 		receiver = cherrypy.request.json['destination']
-		database_toolbox.ReceiveFileDatabase(time, sender, filename, content_type)
 		message = "Sent a file \""+filename+ "\" to you"
-		database_toolbox.MessageDatabase(time, sender, message,receiver)
+		database_toolbox.ReceiveFileDatabase(time, sender, filename, content_type, message,receiver)
 		file = cherrypy.request.json['file']
 		data = base64.b64decode(file)
-		f = open(filename, 'wb')
+		f = open("files/"+filename, 'wb')
 		f.write(data)
 		f.close()
 		print "Message received from "+sender
@@ -271,8 +282,11 @@ class MainApp(object):
 	
 	# Profile------------------------------------Start-----------------------------
 	@cherrypy.expose
+	@cherrypy.tools.json_in()
 	def getProfile(self):
-		username = cherrypy.session.get('username')
+		username = cherrypy.request.json['profile_username']
+		#sender = cherrypy.request.json['sender']
+		#print sender +" is getting my profile"
 		list = database_toolbox.getProfileList(username)
 		'''variable = {}
 		variable['fullname'] = "Steven Yan"
@@ -289,28 +303,59 @@ class MainApp(object):
         #This action allows users to change their profile page.
 		username = cherrypy.session.get('username')
 		database_toolbox.editProfile(fullname, position, description, location, picture, username)
-		raise cherrypy.HTTPRedirect('/profile')
+		raise cherrypy.HTTPRedirect('/profile?owner='+username)
 	@cherrypy.expose
 	@cherrypy.tools.json_in()
 	def askForProfile(self,profileOwner):
-		return profileOwner
+		sender = cherrypy.session.get('username')
+		if (sender == None):
+			raise cherrypy.HTTPRedirect('/login')
+		if (profileOwner == 'None'):
+			raise cherrypy.HTTPRedirect('/onlineUsers')
+		ip = database_toolbox.findIp(profileOwner)
+		port = database_toolbox.findPort(profileOwner)
+		variable = {}
+		variable['sender'] = sender
+		variable['profile_username'] = profileOwner
+		data = json.dumps(variable) 
+		url = 'http://' + str(ip) + ':' + str(port) + '/getProfile'
+		req = urllib2.Request(url,data,{'Content-Type':'application/json'})
+		database_toolbox.IfHasProfile(profileOwner)
+		try:
+			feedback = urllib2.urlopen(req)
+			print "-Responded--Responded--Responded--Responded--Responded--Responded--Responded-"
+			profile = json.loads(feedback.read())
+			fullname = profile['fullname']
+			print fullname
+			position = profile['position']
+			description = profile['description']
+			location = profile['location']
+			picture = profile['picture']
+			database_toolbox.editProfile(fullname, position, description, location, picture, profileOwner)
+			print "adsngiasngaskfgnrojgnaeiognaerohgaegawgasdfjgndgneraoginargaiorwgnadfsjhanr"
+			raise cherrypy.HTTPRedirect('/profile?owner='+profileOwner)
+		except:
+			raise cherrypy.HTTPRedirect('/profile?owner='+profileOwner)
+			print "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+		
 	# Profile------------------------------------End-------------------------------
 	def authoriseUserLogin(self, username, password):
+		print "Starting-------------"
 		if(username == '' or password == ''):
 			return 1
 		variable = {}
 		variable['username'] = username
 		variable['password'] = password.hexdigest()
 		variable['location'] = location
-		variable['ip']       = '172.23.153.95'
+		variable['ip']       = report_ip
 		variable['port']      = listen_port
 		url_values = urllib.urlencode(variable)
 		url = 'http://cs302.pythonanywhere.com/report'
 		url_completed = url + '?' +url_values
-		print url_completed
-		feedback= urllib2.urlopen(url_completed).read()
-		print feedback
-		if (feedback == "0, User and IP logged"):
+		print "Reporting-------------"
+		res= urllib2.urlopen(url_completed).read()
+		print res
+		if (res == "0, User and IP logged"):
 			return 0
 		else:
 			return 1

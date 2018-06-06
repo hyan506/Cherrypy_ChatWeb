@@ -4,7 +4,7 @@ import urllib2
 def getList(username, password):
 	variable = {}
 	variable['username'] = username
-	variable['password'] = password.hexdigest()
+	variable['password'] = password
 	variable['enc'] = 0
 	variable['json'] = 1
 	url_values = urllib.urlencode(variable)
