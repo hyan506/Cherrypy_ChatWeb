@@ -22,19 +22,12 @@ html,body,h1,h2,h3,h4,h5,h6 {font-family: "Roboto", sans-serif;}
   </div>
 </div>
 <script language="javascript">
-            var profileOwner = {{owner}};
-			var CurrentUser = {{user}}
-            if(profileOwner === CurrentUser) {
-                document.getElementById("editbutton").style.visibility="hidden";
-            }
-			else{
-				document.getElementById("editbutton").style.visibility="visible";
-			}
+
 </script>
 <p>logged in as {{user}}</p>
 <body class="w3-container w3-black w3-top_center" style="padding:80px 16px">
 	<p style="text-align:center"><font size="6"><b>Profile of {{owner}}</b></font></p>
-	<img src="{{listOfProfile['picture']}}">
+	<img style="max-height:300px;max-width:300px;":center" src="{{listOfProfile['picture']}}">
 	<p style="text-align:Left"><font size="5"><b>Fullname : {{listOfProfile['fullname']}}</b></p>
 	<p style="text-align:Left"><b>Description : {{listOfProfile['description']}}</b></p>
 	<p style="text-align:Left"><b>Location : {{listOfProfile['location']}}</b></p>

@@ -2,6 +2,7 @@ import hashlib
 import urllib
 import urllib2
 def getList(username, password):
+	#Communicate with the server and ask for Online User List
 	variable = {}
 	variable['username'] = username
 	variable['password'] = password
@@ -13,7 +14,13 @@ def getList(username, password):
 	feedback = urllib2.urlopen(url_completed).read()
 	return feedback
 def passowrdhash(username, password):
+	#Hash the password with username as salt
 	hashword = hashlib.sha256()
 	hashword.update(password)
 	hashword.update(username)
 	return hashword
+def htmlProtect(message):
+	#protect the html file by replacing <>
+	frontRemove=message.replace("<","&lt;")
+	backRemove=frontRemove.replace(">","&gt;")
+	return backRemove

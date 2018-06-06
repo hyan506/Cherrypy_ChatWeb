@@ -2,7 +2,7 @@
 <html>
 <title>Online Users</title>
 <meta charset="UTF-8">
-<meta http-equiv="refresh" content="90">
+<meta http-equiv="refresh" content="40">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
 <link rel="stylesheet" href="https://www.w3schools.com/lib/w3-theme-black.css">
@@ -22,13 +22,16 @@ html,body,h1,h2,h3,h4,h5,h6 {font-family: "Roboto", sans-serif;}
 	<a href="logoff" class="w3-bar-item w3-button w3-padding-large w3-hover-white">LOGOFF</a>
   </div>
 </div>
-<div> Logged in as {{currentUser}}</div>
+<div> Logged in as {{currentUser}} </div>
 <style>
     section { border:1px solid white;
 			padding:10px; 
 			overflow:hidden;
 			}
-    section > section { float:left; }
+    section > section { float:left;
+		resize: none;
+		height: 480px;
+		width:  420px;}
     .indent-1 { padding-center:10px; }
 	.scrollable {
     height: 380px;
@@ -68,7 +71,6 @@ html,body,h1,h2,h3,h4,h5,h6 {font-family: "Roboto", sans-serif;}
     <section>
         	<p style="text-align:center">Chat Box</p>
 			<p style="text-align:center"><b><font size="3">{{receiver}}</font></b></p>
-			<br></br>
 			<div class="scrollable">
 			{% for item in listOfMessage%}
 			<tr><td>{{item[0]}}</td>
@@ -79,12 +81,12 @@ html,body,h1,h2,h3,h4,h5,h6 {font-family: "Roboto", sans-serif;}
 			</div>
     </section>
     <!-- Section 3 -->
-    <section>
+    <section style="resize: none;width:300px">
         	<form action="/sendMessage?receiver={{receiver}}" method="post" enctype="multipart/form-data">
 				<input type="text" size="35" name="message"/><br/>
 			<p></p>
 			<input type="submit" class="w3-button w3-white w3-opacity w3-hover-opacity-off" value="Send Message"/></form>
-			<br></br>
+			<p> last message {{success}}</p>
 			<br></br>
 			<form action="/sendFile?receiver={{receiver}}" method="post" enctype="multipart/form-data">
 			<input type="file" name="myFile" accept="file_extension|audio/*|video/*|image/*|media_type">
@@ -93,7 +95,7 @@ html,body,h1,h2,h3,h4,h5,h6 {font-family: "Roboto", sans-serif;}
 			</form>
     </section>
 	
-	<section>
+	<section style="resize: none;width:300px">
 		<p>Notice Board</p>
 		{% for item in listOfNotice%}
 			<a href="openChatbox?username={{item[0]}}" class="w3-white w3-button" style="text-align:center">Received a {{item[1]}} from {{item[0]}}</a>
